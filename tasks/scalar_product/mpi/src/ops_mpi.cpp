@@ -22,62 +22,54 @@ bool ScalarProductMPI::ValidationImpl() {
 }
 
 bool ScalarProductMPI::PreProcessingImpl() {
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
 
   const auto &vector_a = GetInput().first;
   const auto &vector_b = GetInput().second;
 
   int global_size = 0;
-  if (rank == 0) {
+  if (rank_ == 0) {
     global_size = static_cast<int>(vector_a.size());
   }
   MPI_Bcast(&global_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  std::vector<int> counts(world_size);
-  std::vector<int> displase(world_size, 0);
+  std::vector<int> counts(world_size_);
+  std::vector<int> displase(world_size_, 0);
 
-  const int base = global_size / world_size;
-  int remain = global_size % world_size;
+  const int base = global_size / world_size_;
+  int remain = global_size % world_size_;
 
-  for (int i = 0; i < world_size; ++i) {
-    if (remain > 0) {
-      counts[i] = base + 1;
-      --remain;
-    } else {
-      counts[i] = base;
-    }
-    if (remain > 0) {
-      --remain;
-    }
+  for (int i = 0; i < world_size_; ++i) {
+    counts[i] = base + (i < remain ? 1 : 0);
   }
 
-  for (int i = 1; i < world_size; ++i) {
+  for (int i = 1; i < world_size_; ++i) {
     displase[i] = displase[i - 1] + counts[i - 1];
   }
-  const int local_count = counts[rank];
+  const int local_count = counts[rank_];
 
-  local_vector_a.assign(static_cast<std::size_t>(local_count), 0);
-  local_vector_b.assign(static_cast<std::size_t>(local_count), 0);
+  local_vector_a_.assign(static_cast<std::size_t>(local_count), 0);
+  local_vector_b_.assign(static_cast<std::size_t>(local_count), 0);
 
-  MPI_Scatterv(rank == 0 ? vector_a.data() : nullptr, counts.data(), displase.data(), MPI_INT, local_vector_a.data(),
+  MPI_Scatterv(rank_ == 0 ? vector_a.data() : nullptr, counts.data(), displase.data(), MPI_INT, local_vector_a_.data(),
                local_count, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Scatterv(rank == 0 ? vector_b.data() : nullptr, counts.data(), displase.data(), MPI_INT, local_vector_b.data(),
+  MPI_Scatterv(rank_ == 0 ? vector_b.data() : nullptr, counts.data(), displase.data(), MPI_INT, local_vector_b_.data(),
                local_count, MPI_INT, 0, MPI_COMM_WORLD);
 
-  local_sum = 0;
-  result = 0;
+  local_sum_ = 0;
+  result_ = 0;
   return true;
 }
 
 bool ScalarProductMPI::RunImpl() {
-  local_sum = std::inner_product(local_vector_a.begin(), local_vector_a.end(), local_vector_b.begin(), 0);
-  return MPI_Reduce(&local_sum, &result, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD) == MPI_SUCCESS;
+  local_sum_ = std::inner_product(local_vector_a_.begin(), local_vector_a_.end(), local_vector_b_.begin(), 0);
+  return MPI_Reduce(&local_sum_, &result_, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD) == MPI_SUCCESS;
 }
 
 bool ScalarProductMPI::PostProcessingImpl() {
-  MPI_Bcast(&result, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  GetOutput() = result;
+  MPI_Bcast(&result_, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  GetOutput() = result_;
   return true;
 }
 
