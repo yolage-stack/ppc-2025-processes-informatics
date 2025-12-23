@@ -1,10 +1,9 @@
 #include "scalar_product/seq/include/ops_seq.hpp"
 
-#include <numeric>
+#include <cstddef>
 #include <vector>
 
 #include "scalar_product/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace scalar_product {
 

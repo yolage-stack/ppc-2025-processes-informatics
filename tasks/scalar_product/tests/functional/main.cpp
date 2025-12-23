@@ -19,7 +19,8 @@ class ScalarProductRunFuncTests : public ppc::util::BaseRunFuncTests<InType, Out
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     const auto &[vectors, description] = test_param;
-    return std::string(description);
+    return {description};
+    ;
   }
 
  protected:

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "scalar_product/common/include/common.hpp"
 #include "task/include/task.hpp"
 
